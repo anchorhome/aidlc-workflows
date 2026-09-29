@@ -2333,6 +2333,65 @@ describe("t265b hook lifecycle", () => {
     }
   });
 
+  // anchor patch 0001: after a backward jump into code-generation under
+  // unit-major iteration, the router replays the design stages' per-unit
+  // directives first. Their receipt verbs must pass; everything else under
+  // the durable code-generation pointer stays guarded.
+  test("unit-major re-entry admits only the matching design-stage unit receipts", () => {
+    const proj = scratchProject();
+    try {
+      const statePath = join(proj, RECORD_REL, "aidlc-state.md");
+      seedState(proj);
+      writeFileSync(
+        statePath,
+        readFileSync(statePath, "utf-8").replace(
+          "- **Scope**: poc\n",
+          "- **Scope**: poc\n- **Construction Iteration**: unit-major\n",
+        ),
+      );
+      seedActiveDirective(proj, "functional-design", "todo-core");
+      // The direct state-tool spelling must resolve to a real installed file.
+      cpSync(
+        join(AIDLC_SRC, "tools", "aidlc-state.ts"),
+        join(proj, ".claude", "tools", "aidlc-state.ts"),
+      );
+      const unit = (verb: string, stage = "functional-design", name = "todo-core") =>
+        `aidlc engine state unit ${verb} --stage ${stage} --unit ${name}`;
+
+      // The replay receipts named by the active directive pass, in every spelling.
+      expect(runHook(proj, BASH(unit("start"))).code).toBe(0);
+      expect(runHook(proj, BASH(unit("complete"))).code).toBe(0);
+      expect(runHook(proj, BASH(`${unit("pause")} --reason blocked --next-action ask`)).code).toBe(0);
+      expect(runHook(proj, BASH(`bun .claude/tools/aidlc.ts engine state unit start --stage functional-design --unit todo-core`)).code).toBe(0);
+      expect(runHook(proj, BASH(`bun .claude/tools/aidlc-state.ts unit complete --stage functional-design --unit todo-core`)).code).toBe(0);
+
+      // Anything else stays refused: another stage or unit, code-generation
+      // itself, extra flags, chained or redirected commands, wave receipts,
+      // other engine verbs, and source writes.
+      for (const command of [
+        unit("start", "nfr-requirements"),
+        unit("start", "functional-design", "other-unit"),
+        unit("start", "code-generation"),
+        `${unit("complete")} --wave`,
+        `${unit("complete")} --project-dir /elsewhere`,
+        `${unit("complete")} && touch src/x.ts`,
+        `${unit("complete")} > out.txt`,
+        `FOO=1 ${unit("complete")}`,
+        "aidlc engine orchestrate report --stage code-generation --result awaiting-approval",
+        "touch src/x.ts",
+      ]) {
+        expect({ command, code: runHook(proj, BASH(command)).code }).toEqual({ command, code: 2 });
+      }
+      expect(runHook(proj, WRITE(join(proj, "src", "x.ts"))).code).toBe(2);
+
+      // Stage-major iteration keeps the old behaviour.
+      writeFileSync(statePath, readFileSync(statePath, "utf-8").replace("unit-major", "stage-major"));
+      seedActiveDirective(proj, "functional-design", "todo-core");
+      expect(runHook(proj, BASH(unit("start"))).code).toBe(2);
+    } finally {
+      rmSync(proj, { recursive: true, force: true });
+    }
+  });
   test("fail-open outside identified generation paths; missing authority fails closed", () => {
     const proj = scratchProject();
     try {

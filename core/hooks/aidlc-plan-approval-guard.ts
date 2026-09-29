@@ -1014,6 +1014,94 @@ function swarmCommandUnits(
   return units;
 }
 
+// Unit-major re-entry replay (anchor patch 0001). A backward jump into
+// code-generation moves every per-unit stage's receipt floor, so the router
+// re-issues the design stages' run-stage directives first while Current Stage
+// stays code-generation. The construction protocol's receipt-mode re-entry
+// asks the conductor to re-mint `unit start` / `unit complete` for each of
+// those directives. Without this admission the durable pointer makes every
+// such receipt "code-generation relevant" and the missing code-generation
+// directive refuses it, and nothing can advance.
+//
+// Admit exactly one literal unit-lifecycle invocation whose --stage and --unit
+// match an active v2 per-unit run-stage directive for a Construction stage
+// that precedes code-generation, under unit-major iteration. The state tool
+// still enforces routing, the single-active-unit rule and artifact presence.
+const REPLAY_UNIT_VERBS = new Set(["start", "complete", "pause", "resume"]);
+const REPLAY_UNIT_VALUE_FLAGS = new Set(["--stage", "--unit", "--reason", "--next-action"]);
+
+export function unitMajorReplayReceipt(
+  projectDir: string,
+  cwd: string,
+  command: string,
+  state: string,
+  marker: ActiveDirectiveMarker | null,
+  invocations: Array<{
+    name: string; args: string[]; executable?: string; launchers?: string[];
+    dataDriven?: boolean; executableResolutionChanged?: boolean; ambiguous?: boolean;
+  }>,
+): boolean {
+  if (marker?.version !== 2 || marker.kind !== "run-stage") return false;
+  const directiveStage = normalizeStageName(marker.stage ?? "");
+  const directiveUnit = marker.unit?.trim();
+  if (!directiveUnit || directiveStage === GUARDED_STAGE) return false;
+  if (normalizeStageName(getField(state, "Current Stage") ?? "") !== GUARDED_STAGE) return false;
+  if (getField(state, "Construction Iteration")?.trim() !== "unit-major") return false;
+  const graph = loadStageGraph();
+  const codeGenIndex = graph.findIndex((stage) => stage.slug === GUARDED_STAGE);
+  const stageIndex = graph.findIndex((stage) => stage.slug === directiveStage);
+  const node = graph[stageIndex];
+  if (
+    codeGenIndex < 0 || stageIndex < 0 || stageIndex >= codeGenIndex ||
+    node.phase !== "construction" || node.for_each !== "unit-of-work"
+  ) return false;
+
+  if (invocations.length !== 1 || !/^\s*(?:aidlc(?:\.exe)?|bun(?:\.exe)?)\s/i.test(command)) return false;
+  const invocation = invocations[0];
+  if (invocation.ambiguous || invocation.dataDriven || invocation.executableResolutionChanged ||
+    invocation.launchers?.length) return false;
+  const executable = (invocation.executable ?? invocation.name).toLowerCase();
+  let args = invocation.args;
+  if (executable === "bun" || executable === "bun.exe") {
+    const scriptIndex = args[0] === "run" ? 1 : 0;
+    const script = args[scriptIndex];
+    if (!script || script.startsWith("-")) return false;
+    const entry = resolve(cwd, script);
+    const name = basename(entry);
+    if ((name !== "aidlc.ts" && name !== "aidlc-state.ts") ||
+      dirname(entry) !== resolve(projectDir, harnessDir(), "tools")) return false;
+    try {
+      assertNoSymlinkInChainOrThrow(realpathSync(projectDir), relative(resolve(projectDir), entry));
+      if (!lstatSync(entry).isFile() || lstatSync(entry).isSymbolicLink()) return false;
+    } catch {
+      return false;
+    }
+    args = args.slice(scriptIndex + 1);
+    // aidlc-state.ts takes the noun directly; the unified entry needs `engine state`.
+    if (name === "aidlc.ts") {
+      if (args[0] !== "engine" || args[1] !== "state") return false;
+      args = args.slice(2);
+    }
+  } else if (executable === "aidlc" || executable === "aidlc.exe") {
+    if (args[0] !== "engine" || args[1] !== "state") return false;
+    args = args.slice(2);
+  } else {
+    return false;
+  }
+  if (args[0] !== "unit" || !REPLAY_UNIT_VERBS.has(args[1])) return false;
+  const flags = new Map<string, string>();
+  for (let index = 2; index < args.length; index++) {
+    const key = args[index];
+    const value = args[index + 1];
+    if (!REPLAY_UNIT_VALUE_FLAGS.has(key) || flags.has(key) ||
+      value === undefined || value.startsWith("--")) return false;
+    flags.set(key, value);
+    index++;
+  }
+  return normalizeStageName(flags.get("--stage") ?? "") === directiveStage &&
+    flags.get("--unit") === directiveUnit;
+}
+
 async function mutationIntent(
   projectDir: string,
   toolName: string,
@@ -1045,6 +1133,12 @@ async function mutationIntent(
     const dynamic =
       shellUsesDynamicEvaluation(command) ||
       shellCommandAltersExecutableResolution(command);
+    if (
+      !dynamic && targets.length === 0 &&
+      unitMajorReplayReceipt(projectDir, cwd, command, state, activeDirective, invocations)
+    ) {
+      return { targets: [], opaqueShell: false, shellCommand };
+    }
     opaqueShell =
       dynamic ||
       invocations.some((invocation) =>
