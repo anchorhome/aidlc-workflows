@@ -9,9 +9,10 @@
 #   anchor/fork.sh build                  bun install + package -> dist/kiro
 #   anchor/fork.sh overlay <project> <stock-dir>
 #                                         record the project's customizations of shipped JSON
-#   anchor/fork.sh install <project> [--apply]
+#   anchor/fork.sh install <project> [--apply|--in-flight]
 #                                         refresh the project from dist/kiro (dry run by default),
-#                                         then re-apply its overlay
+#                                         then re-apply its overlay; --in-flight copies instead,
+#                                         for when a workflow is active and aidlc config refuses
 #
 # The overlay lives in the project: <project>/tooling/aidlc/kiro-overlay.json
 # (override with ANCHOR_OVERLAY).
@@ -92,14 +93,38 @@ cmd_overlay() {
   echo "wrote $out ($(node -e 'console.log(Object.keys(require(process.argv[1])).length)' "$out") files)"
 }
 
+# Mid-workflow install. `aidlc config` refuses to refresh while any workflow
+# is active, so this copies the projection's .kiro/ over the project's instead:
+# back up, copy (framework files only; project-owned files are untouched and
+# nothing is deleted), re-apply the overlay, recompile the active runtime graph.
+# Workflow records under aidlc/ are never touched. Once every workflow is
+# complete, run the normal `install --apply` so aidlc config records ownership.
+cmd_install_inflight() {
+  local project=$1 overlay=$2
+  local backup_dir=${ANCHOR_BACKUP_DIR:-$HOME/anchor-home-backups}
+  mkdir -p "$backup_dir"
+  local backup
+  backup="$backup_dir/kiro-before-$(git describe --tags --always anchor)-$(date +%Y%m%d-%H%M%S).tgz"
+  (cd "$project" && tar -czf "$backup" .kiro)
+  echo "backup: $backup  (restore: tar -xzf <backup> -C $project)"
+  rsync -a --exclude tools/data/aidlc-projection.json "$ROOT/dist/kiro/.kiro/" "$project/.kiro/"
+  (cd "$project" && bun "$ROOT/anchor/overlay.mjs" apply . "$overlay" | grep -v '^!' | tail -1 || true)
+  (cd "$project" && bun .kiro/tools/aidlc.ts engine runtime compile >/dev/null)
+  echo "installed $(git describe --tags --always anchor) into $project (in-flight copy); review with git -C $project diff --stat"
+}
+
 cmd_install() {
   local project=${1:-} apply=${2:-}
-  [ -n "$project" ] || die "usage: fork.sh install <project> [--apply]"
+  [ -n "$project" ] || die "usage: fork.sh install <project> [--apply|--in-flight]"
   project=$(cd "$project" && pwd)
   [ -f dist/kiro/.kiro/tools/aidlc.ts ] || die "no dist/kiro; run fork.sh build"
   local overlay=${ANCHOR_OVERLAY:-$project/tooling/aidlc/kiro-overlay.json}
   [ -f "$overlay" ] || die "no overlay at $overlay; run fork.sh overlay first (or set ANCHOR_OVERLAY)"
   local src="$ROOT/dist/kiro"
+  if [ "$apply" = "--in-flight" ]; then
+    cmd_install_inflight "$project" "$overlay"
+    return
+  fi
   if [ "$apply" != "--apply" ]; then
     echo "dry run (add --apply to write):"
     aidlc config --project-dir "$project" --harness kiro --from "$src" --force --dry-run --json |
