@@ -68,4 +68,10 @@ anchor/fork.sh test                 # typecheck, determinism, patch tests
 git push --force-with-lease origin anchor
 anchor/fork.sh install ~/workspace/anchor-home          # dry run
 anchor/fork.sh install ~/workspace/anchor-home --apply  # needs every workflow complete
+# or, while a workflow is active (aidlc config refuses then):
+anchor/fork.sh install ~/workspace/anchor-home --in-flight
 ```
+
+anchor-home switched to this fork on 2026-09-29, in flight, during
+`260928-hub-member-avatars`. The first `install --apply` after that intent
+completes lets `aidlc config` record ownership of the files.
