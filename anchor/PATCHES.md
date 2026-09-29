@@ -25,8 +25,9 @@ Base: `v2.10.0`. Check with `anchor/fork.sh status`.
 - **Test:** `tests/unit/t265-plan-approval-guard.test.ts`, "unit-major
   re-entry admits only the matching design-stage unit receipts". It fails
   without the patch.
-- **Upstream:** not filed yet (issue draft exists). Drop this patch when
-  upstream fixes the guard or scopes the receipt floor to the jump target.
+- **Upstream:** not filed (our call). On each rebase, drop this patch if
+  upstream has fixed the guard or scoped the receipt floor to the jump target;
+  the t265 test shows whether it's still needed.
 
 ## Known upstream test failures (not ours)
 
