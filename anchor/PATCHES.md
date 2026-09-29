@@ -7,6 +7,22 @@ upstream release includes it.
 
 Base: `v2.10.0`. Check with `anchor/fork.sh status`.
 
+## What earns a patch
+
+Unblockers only: a bug or defect that stops our work, such as a deadlock, a
+wrong result or a crash. Performance counts only when it is bad enough to
+block us in practice. Slower-than-ideal but workable behaviour, designed
+behaviour we would have chosen differently, and improvements stay out of the
+fork. Each patch carries a test that fails without it. Keep the diff as small
+as the fix allows, so rebases stay easy.
+
+Considered and declined:
+
+- Scoping the unit-major receipt floor to the jump target. A backward jump
+  makes every per-unit stage re-mint its receipts. That is documented
+  behaviour (construction protocol, "Re-entry settlement and review"), and
+  with 0001 it costs a few quick receipt turns, not a block.
+
 ## 0001 Plan-approval guard admits unit-major re-entry receipts
 
 - **Why:** after a backward jump into code-generation under unit-major
