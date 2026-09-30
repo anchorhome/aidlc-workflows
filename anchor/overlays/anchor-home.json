@@ -1,0 +1,1105 @@
+{
+  ".kiro/settings/cli.json": {
+    "$set": {
+      "toolSearch.enabled": true,
+      "toolSearch.minPct": 5,
+      "toolSearch.minTokens": 50000,
+      "kirocrew.skillDiscovery.previousInheritance": {
+        "present": false,
+        "value": null
+      },
+      "kirocrew.skillDiscovery.inheritFiles": true,
+      "kirocrew.skillDiscovery.inheritSource": "global",
+      "chat.disableInheritingDefaultResources": true
+    }
+  },
+  ".kiro/settings/mcp.json": {
+    "mcpServers": {
+      "aws-mcp": {
+        "$set": {
+          "disabled": false,
+          "env": {
+            "AWS_PROFILE": "default",
+            "AWS_REGION": "us-east-1",
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          }
+        }
+      },
+      "aws-pricing": {
+        "$set": {
+          "disabled": false,
+          "env": {
+            "AWS_PROFILE": "default",
+            "AWS_REGION": "us-east-1",
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          }
+        }
+      },
+      "aws-iac": {
+        "$set": {
+          "args": [
+            "--python",
+            "3.12",
+            "awslabs.aws-iac-mcp-server@latest"
+          ],
+          "env": {
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          },
+          "disabled": false,
+          "autoApprove": [
+            "validate_cloudformation_template",
+            "check_cloudformation_template_compliance",
+            "search_cdk_documentation",
+            "cdk_best_practices",
+            "troubleshoot_cloudformation_deployment",
+            "search_cloudformation_documentation"
+          ]
+        }
+      },
+      "aws-serverless": {
+        "$set": {
+          "disabled": false,
+          "env": {
+            "AWS_PROFILE": "default",
+            "AWS_REGION": "us-east-1",
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          }
+        }
+      },
+      "$set": {
+        "cloudwatch": {
+          "command": "uvx",
+          "args": [
+            "awslabs.cloudwatch-mcp-server@latest"
+          ],
+          "env": {
+            "AWS_PROFILE": "default",
+            "AWS_REGION": "us-east-1",
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          },
+          "disabled": false,
+          "autoApprove": [
+            "describe_log_groups",
+            "execute_log_insights_query",
+            "analyze_log_group"
+          ],
+          "disabledTools": [
+            "get_telemetry_rule_for_organization",
+            "list_telemetry_rules_for_organization",
+            "list_resource_telemetry_for_organization",
+            "get_telemetry_rule",
+            "list_telemetry_rules",
+            "list_resource_telemetry",
+            "stop_telemetry_evaluation_for_organization",
+            "start_telemetry_evaluation_for_organization",
+            "get_telemetry_evaluation_status_for_organization",
+            "stop_telemetry_evaluation",
+            "start_telemetry_evaluation",
+            "get_telemetry_evaluation_status",
+            "get_alarm_history",
+            "get_active_alarms",
+            "get_recommended_metric_alarms",
+            "analyze_metric",
+            "get_metric_metadata",
+            "get_metric_data",
+            "recommend_indexes_account",
+            "recommend_indexes_loggroup",
+            "execute_cwl_insights_batch",
+            "cancel_logs_insight_query",
+            "get_logs_insight_query_results",
+            "execute_log_insights_query"
+          ]
+        },
+        "cloudwatch-applicationsignals": {
+          "command": "uvx",
+          "args": [
+            "awslabs.cloudwatch-applicationsignals-mcp-server@latest"
+          ],
+          "env": {
+            "AWS_PROFILE": "default",
+            "AWS_REGION": "us-east-1",
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          },
+          "disabled": true,
+          "autoApprove": []
+        },
+        "cloudtrail": {
+          "command": "uvx",
+          "args": [
+            "awslabs.cloudtrail-mcp-server@latest"
+          ],
+          "env": {
+            "AWS_PROFILE": "default",
+            "AWS_REGION": "us-east-1",
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          },
+          "disabled": false,
+          "autoApprove": []
+        },
+        "aws-docs": {
+          "command": "uvx",
+          "args": [
+            "awslabs.aws-documentation-mcp-server@latest"
+          ],
+          "env": {
+            "FASTMCP_LOG_LEVEL": "ERROR"
+          },
+          "disabled": false,
+          "autoApprove": [
+            "read_documentation",
+            "search_documentation",
+            "read_sections"
+          ]
+        },
+        "XcodeBuildMCP": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "xcodebuildmcp@latest",
+            "mcp"
+          ],
+          "disabled": false,
+          "autoApprove": [
+            "session_show_defaults",
+            "session_set_defaults",
+            "build_sim",
+            "test_sim",
+            "clean",
+            "boot_sim",
+            "build_run_sim",
+            "snapshot_ui",
+            "screenshot",
+            "start_sim_log_cap",
+            "launch_app_logs_sim",
+            "stop_sim_log_cap",
+            "stop_app_sim",
+            "launch_app_sim",
+            "session_clear_defaults",
+            "list_sims",
+            "get_sim_app_path",
+            "show_build_settings",
+            "open_sim",
+            "list_schemes",
+            "get_coverage_report"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-compliance-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-design-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-composer-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-developer-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@XcodeBuildMCP"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac",
+        "@XcodeBuildMCP"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      },
+      "fs_write": {
+        "allowedPaths": {
+          "$add": [
+            "units/**",
+            "tooling/**",
+            "docs/**",
+            "units.json",
+            "UNITS.md"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-pipeline-deploy-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      },
+      "fs_write": {
+        "allowedPaths": {
+          "$add": [
+            "units/**",
+            "tooling/**",
+            "docs/**",
+            "units.json",
+            "UNITS.md"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-architecture-reviewer-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-product-lead-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-operations-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      },
+      "fs_write": {
+        "allowedPaths": {
+          "$add": [
+            "units/**",
+            "tooling/**",
+            "docs/**",
+            "units.json",
+            "UNITS.md"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-quality-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@XcodeBuildMCP"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac",
+        "@XcodeBuildMCP"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      },
+      "fs_write": {
+        "allowedPaths": {
+          "$add": [
+            "units/**",
+            "tooling/**",
+            "docs/**",
+            "units.json",
+            "UNITS.md"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-architect-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-devsecops-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      },
+      "fs_write": {
+        "allowedPaths": {
+          "$add": [
+            "units/**",
+            "tooling/**",
+            "docs/**",
+            "units.json",
+            "UNITS.md"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc.json": {
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?",
+            "(bash )?tooling/scripts/backlog\\.sh (list|next|start|link|sweep)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      },
+      "fs_write": {
+        "allowedPaths": {
+          "$add": [
+            "units/**",
+            "tooling/**",
+            "docs/**",
+            "units.json",
+            "UNITS.md"
+          ]
+        }
+      }
+    },
+    "hooks": {
+      "userPromptSubmit": {
+        "$append": [
+          {
+            "command": "bash \"$(git rev-parse --show-toplevel)/tooling/scripts/aidlc-backlog-hook.sh\"",
+            "timeout_ms": 60000
+          }
+        ]
+      }
+    }
+  },
+  ".kiro/agents/aidlc-aws-platform-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      },
+      "fs_write": {
+        "allowedPaths": {
+          "$add": [
+            "units/**",
+            "tooling/**",
+            "docs/**",
+            "units.json",
+            "UNITS.md"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-delivery-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  },
+  ".kiro/agents/aidlc-product-agent.json": {
+    "tools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs"
+      ]
+    },
+    "allowedTools": {
+      "$add": [
+        "@cloudwatch",
+        "@cloudtrail",
+        "@aws-docs",
+        "@aws-pricing",
+        "@aws-iac"
+      ]
+    },
+    "toolsSettings": {
+      "execute_bash": {
+        "allowedCommands": {
+          "$add": [
+            "(ls|cat|head|tail|wc|file|stat|pwd|which|tree|du)( .*)?",
+            "(grep|rg|egrep)( .*)?",
+            "find( .*)?",
+            "jq( .*)?",
+            "sed -n( .*)?",
+            "git (status|log|diff|show|branch|rev-parse|ls-files|grep|blame|remote|fetch|worktree list)( .*)?",
+            "git (add|commit|checkout|switch|restore|merge|stash list|stash show)( .*)?",
+            "\\.tools/xcodegen/xcodegen\\.artifactbundle/xcodegen-2\\.45\\.3-macosx/bin/xcodegen generate( .*)?",
+            "xcodebuild( .*)?",
+            "xcrun (simctl|xcresulttool|xctrace)( .*)?",
+            "(bash )?tooling/scripts/sim-verify\\.sh( .*)?",
+            "(bash )?tooling/scripts/vendor-backend-shared\\.sh( .*)?",
+            "(PYTHONPATH=\\S+ )?python3? -m pytest( .*)?",
+            "(bash )?tooling/scripts/(docs|graph|spec|selfreport)-check\\.sh( .*)?",
+            "npx (jest|tsc|cdk synth|cdk diff)( .*)?",
+            "npm (test|run build|ci)( .*)?",
+            "git push( -u| --set-upstream)? origin [A-Za-z0-9._/-]+( 2>&1)?",
+            "gh pr (create|view|list|checks|diff|status|merge)( .*)?"
+          ]
+        },
+        "deniedCommands": {
+          "$add": [
+            ".*-c stage=prod.*",
+            ".*cdk destroy.*",
+            "git push.*(--force|--force-with-lease|--mirror|--all|--delete|--prune| -f( .*)?$| -d( .*)?$| \\+).*",
+            "git push.*[\\s:/](main|master|poc|HEAD)(\\s.*)?",
+            "gh pr merge.*--admin.*"
+          ],
+          "$remove": [
+            "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
+          ]
+        }
+      }
+    }
+  }
+}

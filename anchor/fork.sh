@@ -14,8 +14,9 @@
 #                                         then re-apply its overlay; --in-flight copies instead,
 #                                         for when a workflow is active and aidlc config refuses
 #
-# The overlay lives in the project: <project>/tooling/aidlc/kiro-overlay.json
-# (override with ANCHOR_OVERLAY).
+# The overlay lives in this repo: anchor/overlays/<project-dir-name>.json
+# (override with ANCHOR_OVERLAY). Keeping it here, not in the project, means
+# no untracked tooling file sits in the project's tree during a workflow.
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -87,7 +88,7 @@ cmd_test() {
 cmd_overlay() {
   local project=${1:-} stock=${2:-}
   [ -n "$project" ] && [ -n "$stock" ] || die "usage: fork.sh overlay <project> <stock-dir>"
-  local out=${ANCHOR_OVERLAY:-$project/tooling/aidlc/kiro-overlay.json}
+  local out=${ANCHOR_OVERLAY:-$ROOT/anchor/overlays/$(basename "$(cd "$project" && pwd)").json}
   mkdir -p "$(dirname "$out")"
   bun anchor/overlay.mjs extract "$project" "$stock" > "$out"
   echo "wrote $out ($(node -e 'console.log(Object.keys(require(process.argv[1])).length)' "$out") files)"
@@ -118,7 +119,7 @@ cmd_install() {
   [ -n "$project" ] || die "usage: fork.sh install <project> [--apply|--in-flight]"
   project=$(cd "$project" && pwd)
   [ -f dist/kiro/.kiro/tools/aidlc.ts ] || die "no dist/kiro; run fork.sh build"
-  local overlay=${ANCHOR_OVERLAY:-$project/tooling/aidlc/kiro-overlay.json}
+  local overlay=${ANCHOR_OVERLAY:-$ROOT/anchor/overlays/$(basename "$project").json}
   [ -f "$overlay" ] || die "no overlay at $overlay; run fork.sh overlay first (or set ANCHOR_OVERLAY)"
   local src="$ROOT/dist/kiro"
   if [ "$apply" = "--in-flight" ]; then
