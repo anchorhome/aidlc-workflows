@@ -1076,7 +1076,7 @@ export function renderTestingContract(contract: TestingPostureContract): string 
   return `${CONTRACT_HEADING}\n\n\`\`\`json\n${JSON.stringify(contract, null, 2)}\n\`\`\`\n`;
 }
 
-function rawMarkdownSection(content: string, heading: string): string {
+export function rawMarkdownSection(content: string, heading: string): string {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const body: string[] = [];
   let found = false;
@@ -1095,6 +1095,58 @@ function rawMarkdownSection(content: string, heading: string): string {
     if (found) body.push(line);
   }
   return found ? body.join("\n") : "";
+}
+
+// Line span of a `## ` section, found with the same fence-aware scan
+// rawMarkdownSection uses, so a fenced ``` line in the plan body cannot end the
+// section early. `end` is exclusive: the first line of the next out-of-fence
+// `## ` heading, or the line count. Lines are the \r\n-normalized split.
+function markdownSectionBounds(
+  lines: readonly string[],
+  heading: string,
+): { start: number; end: number } | null {
+  let start = -1;
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (start < 0) {
+      if (!inFence && line.trimEnd() === heading) start = i;
+      continue;
+    }
+    if (!inFence && /^## [^\n]*$/.test(line)) return { start, end: i };
+  }
+  return start < 0 ? null : { start, end: lines.length };
+}
+
+// Writes the posture's Testing Contract into the plan at planPath: appended
+// when the plan has none, replaced in place when it has one. The block is
+// always renderTestingContract(contract), byte for byte, so it round-trips
+// through parseTestingContract (#334: a hand-copied block loses its literal
+// \n escapes). Running it twice leaves the file unchanged. A missing plan makes
+// readFileSync throw before anything is written, so no file is ever created.
+export function embedTestingContract(
+  planPath: string,
+  contract: TestingPostureContract,
+): void {
+  const block = renderTestingContract(contract);
+  const original = readFileSync(planPath, "utf-8");
+  const lines = original.replace(/\r\n/g, "\n").split("\n");
+  const bounds = markdownSectionBounds(lines, CONTRACT_HEADING);
+  let result: string;
+  if (bounds === null) {
+    const separator = original.length === 0 ? "" : original.endsWith("\n") ? "\n" : "\n\n";
+    result = `${original}${separator}${block}`;
+  } else {
+    const before = lines.slice(0, bounds.start).join("\n");
+    const after = lines.slice(bounds.end).join("\n");
+    const prefix = bounds.start > 0 ? `${before}\n` : "";
+    result = bounds.end < lines.length ? `${prefix}${block}\n${after}` : `${prefix}${block}`;
+  }
+  writeFileSync(planPath, result);
 }
 
 export function parseTestingContract(plan: string): TestingPostureContract | null {
@@ -3850,10 +3902,20 @@ function targetFromArgs(
   throw new Error(`${subcommand} requires exactly one of --unit <unit> or --stage-level`);
 }
 
+// The one list of testing-posture subcommands: dispatch and the usage error
+// both read it, so a new verb cannot be reachable but unlisted, or the reverse.
+const SUBCOMMANDS = [
+  "resolve",
+  "render",
+  "fingerprint",
+  "verify",
+  "begin",
+  "brief",
+  "embed",
+] as const;
+
 export function main(argv: string[]): void {
-  const subcommand = argv.find((arg) =>
-    ["resolve", "render", "fingerprint", "verify", "begin", "brief"].includes(arg)
-  );
+  const subcommand = argv.find((arg) => (SUBCOMMANDS as readonly string[]).includes(arg));
   const projectDir = resolveProjectDir(flagValue(argv, "--project-dir"));
   try {
     switch (subcommand) {
@@ -3863,6 +3925,14 @@ export function main(argv: string[]): void {
       case "render":
         process.stdout.write(renderTestingContract(resolveTestingPosture(projectDir)));
         return;
+      case "embed": {
+        const planPath = flagValue(argv, "--plan");
+        if (!planPath || planPath.startsWith("--") || planPath.trim().length === 0) {
+          throw new Error("embed requires a non-blank --plan <path>");
+        }
+        embedTestingContract(planPath, resolveTestingPosture(projectDir));
+        return;
+      }
       case "fingerprint": {
         const target = targetFromArgs(argv, "fingerprint");
         const reapprove = argv.includes("--reapprove");
@@ -4000,7 +4070,7 @@ export function main(argv: string[]): void {
       }
       default:
         throw new Error(
-          `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: resolve, render, fingerprint, verify, begin, brief`,
+          `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: ${SUBCOMMANDS.join(", ")}`,
         );
     }
   } catch (error) {

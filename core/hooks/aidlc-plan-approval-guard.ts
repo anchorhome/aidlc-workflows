@@ -595,15 +595,60 @@ function lastFlagValue(args: string[], flag: string): string | null {
   return value;
 }
 
-function isNativePlanApprovalPrerequisite(name: string, args: string[]): boolean {
+function isNativePlanApprovalPrerequisite(
+  name: string,
+  args: string[],
+  context?: PrerequisiteContext,
+): boolean {
   const command = name.toLowerCase();
   return (
     (command === "aidlc" || command === "aidlc.exe") &&
-    isPlanApprovalPrerequisite(args)
+    isPlanApprovalPrerequisite(args, context)
   );
 }
 
-function isPlanApprovalPrerequisite(args: string[]): boolean {
+// Where an invocation runs. Only the `embed` write permit needs it, to resolve
+// its --plan target; without it, embed is not a prerequisite.
+export interface PrerequisiteContext {
+  projectDir: string;
+  cwd: string;
+}
+
+// `testing-posture embed` writes the Testing Contract into a plan, so unlike its
+// read-only siblings it is a prerequisite only while its --plan target resolves
+// inside the Code Generation record dir of the project and unit it names.
+function isRecordDirEmbed(args: string[], context: PrerequisiteContext | undefined): boolean {
+  if (!context) return false;
+  const routeArgs = args.slice(3);
+  const planArg = lastFlagValue(routeArgs, "--plan");
+  if (planArg === null || planArg.trim().length === 0) return false;
+  const projectArg = lastFlagValue(routeArgs, "--project-dir");
+  const projectDir = projectArg === null
+    ? context.projectDir
+    : resolve(context.cwd, projectArg);
+  const unitArg = lastFlagValue(routeArgs, "--unit");
+  const unit = unitArg !== null && unitArg.trim().length > 0 ? unitArg : null;
+  try {
+    const inside = (dir: string, target: string): boolean => {
+      const rel = relative(dir, target);
+      return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+    };
+    const recordDir = resolve(codeGenerationRecordDir(projectDir, unit));
+    const planPath = resolve(context.cwd, planArg);
+    // Lexical containment first, then the real paths, so neither `..` nor a
+    // symlink in the record dir can point the write somewhere else. embed
+    // needs an existing plan, so a missing one fails here as it would there.
+    return inside(recordDir, planPath) &&
+      inside(realpathSync(recordDir), realpathSync(planPath));
+  } catch {
+    return false;
+  }
+}
+
+export function isPlanApprovalPrerequisite(
+  args: string[],
+  context?: PrerequisiteContext,
+): boolean {
   if (args[0] !== "engine") return false;
   // Direct refusals can offer the abort or the fence switch without publishing
   // a selection marker. The strict drift ask in this hook prints
@@ -629,6 +674,9 @@ function isPlanApprovalPrerequisite(args: string[]): boolean {
     ["resolve", "render", "fingerprint", "verify"].includes(verb)
   ) {
     return true;
+  }
+  if (noun === "testing-posture" && verb === "embed") {
+    return isRecordDirEmbed(args, context);
   }
   // Checkpoint review owns its own audit/readiness/human authority. It must
   // remain reachable after the engine replaces invoke-swarm with its gate
@@ -734,7 +782,7 @@ function isFrameworkToolInvocation(
   dataDriven = false,
   wrapped = false,
 ): boolean {
-  if (isNativePlanApprovalPrerequisite(name, args)) {
+  if (isNativePlanApprovalPrerequisite(name, args, { projectDir, cwd })) {
     return !executableResolutionChanged && !dataDriven;
   }
   if (normalizedCommandName(name) !== "bun") return false;
@@ -774,7 +822,7 @@ function isFrameworkToolInvocation(
       wrapped ||
       executableResolutionChanged ||
       dataDriven ||
-      !isPlanApprovalPrerequisite(args.slice(scriptIndex + 1))
+      !isPlanApprovalPrerequisite(args.slice(scriptIndex + 1), { projectDir, cwd })
     )
   ) {
     return false;
