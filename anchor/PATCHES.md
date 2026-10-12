@@ -5,7 +5,7 @@ each. `main` only mirrors `awslabs/aidlc-workflows` main. We keep this list
 short: every patch is also offered upstream, and dropped here once an
 upstream release includes it.
 
-Base: `v2.11.0`. Check with `anchor/fork.sh status`.
+Base: `v2.11.0`. Current fork release: `v2.11.101`. Check with `anchor/fork.sh status`.
 
 ## What earns a patch
 
@@ -52,6 +52,27 @@ refused. Dropped; nothing to carry.
   the agent paste the block by hand. Upstream main (after v2.11.0) adds
   `replaceTestingContractSection`, which re-renders only a block made stale by a
   setting change; reuse it for the splice once it ships in a release.
+## 0003 Fork release channel
+- **Why:** anchor-home runs the compiled `aidlc` binary, so a patch only reaches
+  it through a release, and `aidlc update` installs only releases whose
+  provenance GitHub attests. That needs this repo to publish its own releases.
+- **Change:** `DEFAULT_RELEASE_REPOSITORY` (`core/tools/aidlc-release.ts`) and the
+  `install.sh` / `install.ps1` defaults point at `anchorhome/aidlc-workflows`.
+  `release.yml` requires the tag on `anchor` (upstream: `release/<minor>` or
+  `main`) and a fork version (patch >= 100), so mirrored upstream tags never
+  publish here, and drops upstream's Full Suite gate (its live lanes need
+  awslabs' AWS role secret). Fork version = upstream base patch x 1000 + 100 +
+  build (base 2.11.0, build 1 -> 2.11.101).
+  README badge, CHANGELOG and `aidlc-version.ts` carry the fork version.
+- **Test:** `t68`, `t243`, `t244`, `t330`, `t332`, `t345`, `t239` and
+  `t-ci-full-suite-evidence` pass. The workflow-shape pins in `t244`, `t332`,
+  `t345` and `t-ci-full-suite-evidence` are re-pinned to the fork's wiring (no
+  Full Suite job; tag on `anchor`; upstream versions refused), and the `gh`
+  fixture follows the new default repository.
+- **Sync:** `fork.sh sync` fetches upstream tags locally but never pushes them:
+  origin runs `release.yml` on any `v*.*.*` tag push, and an upstream tag's
+  own `release.yml` has no fork guard.
+- **Upstream:** never; fork-only. On rebase, re-apply and bump the version.
 ## Known upstream test failures (not ours)
 
 `tests/unit/t343-swarm-checkpoints.test.ts` "lifecycle-gate withdraws batch
@@ -70,7 +91,7 @@ four under "(2) summary confirmation" and one under "(4) an invalid memory Mode"
 ## Updating to a new upstream release
 
 ```sh
-anchor/fork.sh sync                 # mirror upstream main and tags
+anchor/fork.sh sync                 # mirror upstream main; fetch tags locally
 anchor/fork.sh rebase vX.Y.Z        # move our patches onto the release
 anchor/fork.sh test                 # typecheck, determinism, patch tests
 # edit this file: drop patches upstream now includes, update Base

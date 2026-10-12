@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [2.11.101] - 2026-10-12
+Anchor Home fork release: upstream 2.11.0 plus the Anchor patches in `anchor/PATCHES.md`. Install with `aidlc update --version 2.11.101` (the fork's releases are the default channel). Fork release numbers are the upstream base patch times 1000, plus 100, plus the fork build, so they never collide with an upstream version.
+* `aidlc engine testing-posture embed --plan <path>` writes the current Testing Contract into a Code Generation plan, inserting or replacing it byte-for-byte as `render` prints it, so a plan built this way passes Plan Approval on the first try (#334). The plan-approval guard admits it only for a plan inside the Code Generation record directory.
+* `aidlc update`, `install.sh` and `install.ps1` default to `anchorhome/aidlc-workflows` releases and verify their provenance against that repository's release workflow.
+* The fork's stable release runs without upstream's Full Suite gate, whose live lanes need credentials only awslabs holds; the static check, native smoke tests, all seven target builds, lifecycle installs and the update-from-previous check still gate it.
+* The 2.10.101 unit-major re-entry patch is dropped: upstream 2.11.0 no longer deadlocks there.
 ## [2.11.0] - 2026-10-08
 
 AI-DLC 2.11.0 rolls up the user-visible changes merged since 2.10.0, including replies read and kept in the person's own words from any chat, requests carried out at once with the way back, Plan Approval asked by the engine, Construction that keeps finished Unit work when the plan changes, leaner scope defaults, configuration that runs beside open work and keeps the team's own files, far fewer permission prompts, a named step when a tool's hooks never run, and corrections on every harness. **Upgrade:** run `aidlc update`, then run `aidlc config --yes` in each project to refresh its harness runtime (`aidlc config --harness <name> --yes` for each harness when a project has more than one); open work carries on through the refresh. Manual-copy users must replace the complete `runtime/<harness>/` tree from `aidlc-copy-runtime-2.11.0.tar.gz`, which now needs Bun 1.3.8 or newer. Existing intents keep their recorded Guard Policy, sensors, learnings, and summary confirmation; Plan Approval and Collaborators, which they never recorded, follow their scope's new defaults, so outside `enterprise` an in-flight intent runs its remaining stages with the lead agent only unless `/aidlc --collaborators on` is typed.

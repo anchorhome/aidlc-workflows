@@ -3,7 +3,7 @@
 # installs its Bun projection into a project. See anchor/PATCHES.md.
 #
 #   anchor/fork.sh status                 base tag, our patches, newer upstream releases
-#   anchor/fork.sh sync                   fetch upstream; fast-forward origin/main and push tags
+#   anchor/fork.sh sync                   fetch upstream tags locally; fast-forward origin/main
 #   anchor/fork.sh rebase <tag>           move our patches onto an upstream release tag
 #   anchor/fork.sh test                   typecheck, determinism check, and the patch tests
 #   anchor/fork.sh build                  bun install + package -> dist/kiro
@@ -48,9 +48,11 @@ cmd_sync() {
   if git show-ref -q refs/remotes/origin/main; then
     git merge-base --is-ancestor origin/main upstream/main || die "origin/main has diverged from upstream/main; it must only mirror upstream"
   fi
-  git push -q origin upstream/main:refs/heads/main
-  git push -q origin --tags
-  echo "origin/main = upstream/main ($(git rev-parse --short upstream/main)); tags pushed"
+  # Branch only. Upstream tags stay local: origin runs release.yml on any
+  # v*.*.* tag push, and an upstream tag's own release.yml has no fork guard.
+  # Fork releases are tagged by hand on anchor (see PATCHES.md).
+  git -c push.followTags=false push -q --no-tags origin upstream/main:refs/heads/main
+  echo "origin/main = upstream/main ($(git rev-parse --short upstream/main)); upstream tags fetched locally, not pushed"
 }
 
 cmd_rebase() {

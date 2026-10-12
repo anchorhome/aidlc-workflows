@@ -1351,16 +1351,15 @@ describe("t332 preview publication pipeline", () => {
       sha: `\${{ steps.validate.outputs.sha }}`,
     });
     expect(stable.jobs.release.environment).toBe("release");
-    expect(stable.jobs["release-result"].needs).toEqual(["validate", "full_suite_gate", "release"]);
+    expect(stable.jobs["release-result"].needs).toEqual(["validate", "release"]);
     expect(stableText).not.toContain("plan-preview-release.ts");
     expect(stableText).not.toContain("AIDLC_BUILD_VERSION");
     expect(stableText).not.toContain("./.github/workflows/ci.yml");
     expect(stable.jobs.validate.permissions).toEqual({ contents: "read" });
     expect(stable.jobs.validate.steps?.some((step) => step.name === "Require passing full-suite evidence")).toBe(false);
-    // By maintainer decision on 2026-09-26, stable publication requires a passing
-    // Full Suite for the tagged commit; t-ci-full-suite-evidence pins the gate.
-    expect(stable.jobs.full_suite.uses).toBe("./.github/workflows/full-suite.yml");
-    expect(stable.jobs.full_suite.secrets).toBe("inherit");
+    // Anchor fork (patch 0003): stable publication does not call upstream's
+    // Full Suite (awslabs-only live credentials); t-ci-full-suite-evidence pins it.
+    expect(stable.jobs.full_suite).toBeUndefined();
 
     const releaseRunbooks = [
       "CONTRIBUTING.md",
@@ -1543,16 +1542,16 @@ describe("t332 preview publication pipeline", () => {
       for (const dependency of ["validate", "verify", "native-smoke"]) {
         expect(required.has(dependency), `stable ${name} must descend from ${dependency}`).toBe(true);
       }
-      // Builds run alongside the Full Suite; only publication waits for its gate.
-      expect(required.has("full_suite_gate"), `stable ${name} and the Full Suite gate`).toBe(name === "publish" || name === "release");
+      // Anchor fork (patch 0003): no Full Suite gate in the stable DAG.
+      expect(required.has("full_suite_gate"), `stable ${name} and the Full Suite gate`).toBe(false);
     }
     // By maintainer decision on 2026-10-04, a stable release people on the last
     // release cannot update to does not publish; a preview reports it.
     expect(stable.jobs.publish.needs)
-      .toEqual(["validate", "musl-smoke", "windows-lifecycle", "unix-lifecycle", "update-from-previous", "full_suite_gate"]);
+      .toEqual(["validate", "musl-smoke", "windows-lifecycle", "unix-lifecycle", "update-from-previous"]);
     expect(stable.jobs.publish.if).toContain("needs.update-from-previous.result == 'success'");
     expect(preview.jobs.publish.needs).not.toContain("update-from-previous");
-    expect(stable.jobs.release.needs).toEqual(["validate", "publish", "full_suite_gate"]);
+    expect(stable.jobs.release.needs).toEqual(["validate", "publish"]);
 
     for (const key of ["tag", "sha", "skip", "preview_version", "preview_plan"]) {
       expect(preview.jobs.validate.outputs?.[key], key).toBeDefined();

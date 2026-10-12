@@ -3417,10 +3417,10 @@ describe("t244 Windows and completion release surfaces", () => {
       expect(parsed.jobs[name], `stable release must not rerun source tier: ${name}`).toBeUndefined();
     }
     expect(workflow).not.toContain("Require passing full-suite evidence");
-    // Stable publication requires a passing Full Suite for the tag; the suite owns
-    // the source tiers, so release.yml calls it instead of running them itself.
-    expect(workflow).toContain("uses: ./.github/workflows/full-suite.yml");
-    expect(workflow).toContain("bun scripts/ci-full-suite-evidence.ts check");
+    // Anchor fork (patch 0003): stable publication does not call upstream's Full
+    // Suite, whose live lanes need awslabs-only credentials.
+    expect(workflow).not.toContain("uses: ./.github/workflows/full-suite.yml");
+    expect(workflow).not.toContain("ci-full-suite-evidence.ts");
     expect(workflow).not.toContain("tests/run-tests.");
     const nativeSmokeJob = workflow.slice(
       workflow.indexOf("  native-smoke:"),
@@ -3467,14 +3467,9 @@ describe("t244 Windows and completion release surfaces", () => {
       .filter(([, job]) => job.permissions?.[permission] === "write")
       .map(([name]) => name);
     expect(jobsWith("attestations")).toEqual(["publish"]);
-    // The Full Suite call forwards OIDC only to its live jobs' ai-pr-review
-    // role, as the preview call does. It has no steps of its own, and a
-    // certificate minted in a called job names full-suite.yml, not the
-    // release.yml signer that installers require.
-    expect(jobsWith("id-token")).toEqual(["full_suite", "publish"]);
-    expect(parsed.jobs.full_suite.uses).toBe("./.github/workflows/full-suite.yml");
-    expect(parsed.jobs.full_suite.steps).toBeUndefined();
-    expect(parsed.jobs.full_suite.permissions).toEqual({ contents: "read", "id-token": "write" });
+    // Anchor fork (patch 0003): with no Full Suite call, only publish mints OIDC.
+    expect(jobsWith("id-token")).toEqual(["publish"]);
+    expect(parsed.jobs.full_suite).toBeUndefined();
     expect(parsed.jobs["stage-release"].permissions).toEqual({ contents: "read" });
     expect(parsed.jobs.publish.permissions).toEqual({
       contents: "read",
@@ -3788,7 +3783,7 @@ describe("t244 Windows and completion release surfaces", () => {
         environment?: string;
       }>;
     };
-    expect(parsed.jobs.release.needs).toEqual(["validate", "publish", "full_suite_gate"]);
+    expect(parsed.jobs.release.needs).toEqual(["validate", "publish"]);
     expect(parsed.jobs.release.permissions).toEqual({ contents: "write" });
     expect(parsed.jobs.release.environment).toBe("release");
     const release = workflowJob(workflow, "release");

@@ -28,7 +28,7 @@ const repository = valueAfter("--repo");
 const signerWorkflow = valueAfter("--signer-workflow");
 const hostname = valueAfter("--hostname");
 const expectedRepository =
-  process.env.AIDLC_RELEASE_REPOSITORY?.trim() || "awslabs/aidlc-workflows";
+  process.env.AIDLC_RELEASE_REPOSITORY?.trim() || "anchorhome/aidlc-workflows";
 const manifestPath = join(dirname(args[2]), "version.json");
 const manifestVersion = existsSync(manifestPath)
   ? (JSON.parse(readFileSync(manifestPath, "utf-8")) as { version?: string }).version

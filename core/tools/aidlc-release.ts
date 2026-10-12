@@ -105,7 +105,9 @@ const MAX_METADATA_BYTES = 1024 * 1024;
 const MAX_RELEASE_LIST_PAGES = 10;
 const PROGRESS_WIDTH = 72;
 const PROVENANCE_BUNDLE = "aidlc-release.intoto.jsonl";
-const DEFAULT_RELEASE_REPOSITORY = "awslabs/aidlc-workflows";
+// Anchor fork: releases are published and attested by anchorhome/aidlc-workflows, so the
+// installer and `aidlc update` look there unless AIDLC_RELEASE_REPOSITORY says otherwise.
+const DEFAULT_RELEASE_REPOSITORY = "anchorhome/aidlc-workflows";
 const GITHUB_API_HEADERS = {
   Accept: "application/vnd.github+json",
   "User-Agent": "aidlc-native-lifecycle",

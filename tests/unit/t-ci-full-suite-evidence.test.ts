@@ -244,105 +244,16 @@ describe("t-ci-full-suite-evidence stable release Full Suite gate", () => {
 });
 
 describe("t-ci-full-suite-evidence release.yml wiring", () => {
-  test("the gate reruns only when needed and publication waits for its verified commit", () => {
-    const jobs = release.jobs;
-    expect(jobs.full_suite_evidence).toMatchObject({ needs: "validate", permissions: { actions: "read", contents: "read" } });
-    expect(jobs.full_suite_evidence.outputs).toEqual({ run_id: `\${{ steps.find.outputs.run_id }}` });
-    expect(step("full_suite_evidence", "Find a passing Full Suite for the tagged commit").run)
-      .toContain('bun scripts/ci-full-suite-evidence.ts find --sha "$TAG_SHA" --repository "$GITHUB_REPOSITORY"');
-    // Mirrors the preview call, including secrets: inherit for the live jobs' environment secret.
-    expect(jobs.full_suite).toEqual({
-      needs: ["validate", "full_suite_evidence"],
-      if: "needs.full_suite_evidence.outputs.run_id == ''",
-      permissions: { contents: "read", "id-token": "write" },
-      uses: "./.github/workflows/full-suite.yml",
-      secrets: "inherit",
-      with: { ref: `\${{ needs.validate.outputs.sha }}` },
-    });
-    expect(jobs.full_suite_gate).toMatchObject({
-      name: "Require a passing Full Suite",
-      needs: ["validate", "full_suite_evidence", "full_suite"],
-      if: `\${{ !cancelled() && needs.validate.result == 'success' && needs.full_suite_evidence.result == 'success' }}`,
-      permissions: { actions: "read", contents: "read" },
-      outputs: { sha: `\${{ steps.check.outputs.sha }}` },
-    });
-    expect(step("full_suite_gate", "Download this run's Full Suite result")).toMatchObject({
-      if: "needs.full_suite_evidence.outputs.run_id == ''", "continue-on-error": true, with: { name: EVIDENCE_ARTIFACT },
-    });
-    expect(step("full_suite_gate", "Download the reused Full Suite result")).toMatchObject({
-      if: "needs.full_suite_evidence.outputs.run_id != ''", "continue-on-error": true,
-    });
-    expect(step("full_suite_gate", "Download the reused Full Suite result").run).toContain(`--name ${EVIDENCE_ARTIFACT}`);
-    for (const name of ["publish", "release"]) {
-      const needs = jobs[name].needs as string[];
-      expect(needs, name).toContain("full_suite_gate");
-      // full_suite is skipped when evidence is reused; implicit success() would skip publication.
-      expect(jobs[name].if, name).toStartWith("${{ !cancelled() && ");
-      for (const need of needs) expect(jobs[name].if, `${name} requires ${need}`).toContain(`needs.${need}.result == 'success'`);
-      const recheck = step(name, "Recheck release source");
-      expect(recheck.env?.FULL_SUITE_SHA).toBe(`\${{ needs.full_suite_gate.outputs.sha }}`);
-      expect(recheck.run).toContain('test "$FULL_SUITE_SHA" = "$AUTHORIZED_SHA"');
+  // Anchor fork (patch 0003): release.yml drops upstream's Full Suite gate, so
+  // the evidence script is unused there; the script's own behaviour is still
+  // covered above.
+  test("the fork release workflow carries no Full Suite gate", () => {
+    const text = readFileSync(join(REPO_ROOT, ".github/workflows/release.yml"), "utf8");
+    for (const job of ["full_suite_evidence", "full_suite", "full_suite_gate"]) {
+      expect(text).not.toContain(`  ${job}:`);
     }
-    // Builds and lifecycle checks run alongside the suite instead of waiting for it.
-    for (const name of ["verify", "native-smoke", "build", "musl-smoke", "stage-release", "windows-lifecycle", "unix-lifecycle"]) {
-      const needs = [jobs[name].needs ?? []].flat();
-      expect(needs.some((need) => need.startsWith("full_suite")), name).toBe(false);
-    }
-    expect(jobs["release-result"].needs).toEqual(["validate", "full_suite_gate", "release"]);
-    expect(step("release-result", "Require a passing Full Suite")).toMatchObject({
-      if: `\${{ !cancelled() && needs.validate.result == 'success' }}`,
-      env: { GATE_RESULT: `\${{ needs.full_suite_gate.result }}` },
-    });
   });
-
-  test("the gate check requires the called suite to succeed and binds the result to its run", () => {
-    const check = step("full_suite_gate", "Require a passing Full Suite for the tagged commit");
-    expect(check.env).toEqual({
-      TAG_SHA: `\${{ needs.validate.outputs.sha }}`,
-      REUSED_RUN_ID: `\${{ needs.full_suite_evidence.outputs.run_id }}`,
-      FULL_SUITE_RESULT: `\${{ needs.full_suite.result }}`,
-    });
-    const root = mkdtempSync(join(tmpdir(), "t-ci-full-suite-evidence-gate-"));
-    try {
-      mkdirSync(join(root, "full-suite-evidence"));
-      const output = join(root, "output");
-      const gate = (result: unknown, env: Record<string, string>) => {
-        writeFileSync(output, "");
-        const file = join(root, "full-suite-evidence", "full-suite-result.json");
-        rmSync(file, { force: true });
-        if (result !== undefined) writeFileSync(file, JSON.stringify(result));
-        const outcome = bash(check.run!, REPO_ROOT, {
-          TAG_SHA: SHA, GITHUB_RUN_ID: "700", RUNNER_TEMP: posix(root), GITHUB_OUTPUT: posix(output), ...env,
-        });
-        return { ...outcome, output: readFileSync(output, "utf8") };
-      };
-      const called = gate(passing("700"), { REUSED_RUN_ID: "", FULL_SUITE_RESULT: "success" });
-      expect(called.status, called.stderr).toBe(0);
-      expect(called.output).toBe(`sha=${SHA}\nrun_id=700\n`);
-      const reused = gate(passing("555"), { REUSED_RUN_ID: "555", FULL_SUITE_RESULT: "skipped" });
-      expect(reused.status, reused.stderr).toBe(0);
-      expect(reused.output).toBe(`sha=${SHA}\nrun_id=555\n`);
-      // A called suite that did not succeed refuses publication even beside a passing file.
-      const failed = gate(passing("700"), { REUSED_RUN_ID: "", FULL_SUITE_RESULT: "failure" });
-      expect(failed.status).toBe(1);
-      expect(failed.stdout).toContain(`::error::The Full Suite this release ran for ${SHA} ended with result failure`);
-      for (const [result, env] of [
-        [passing("700"), { REUSED_RUN_ID: "555", FULL_SUITE_RESULT: "skipped" }],
-        [passing("555", OTHER), { REUSED_RUN_ID: "555", FULL_SUITE_RESULT: "skipped" }],
-        [undefined, { REUSED_RUN_ID: "", FULL_SUITE_RESULT: "failure" }],
-        [undefined, { REUSED_RUN_ID: "555", FULL_SUITE_RESULT: "skipped" }],
-      ] as const) {
-        const refused = gate(result, env);
-        expect(refused.status, JSON.stringify(env)).toBe(1);
-        expect(refused.stderr).toContain("::error::Stable publication refused");
-        expect(refused.output).toBe("");
-      }
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  }, NATIVE_FIXTURE_SETUP_TIMEOUT_MS);
-
-  test("a tag outside main fails validation with the Full Suite reason", () => {
+  test("a tag outside anchor or below the fork version range fails validation", () => {
     const validate = step("validate", "Validate release tag and source");
     const root = mkdtempSync(join(tmpdir(), "t-ci-full-suite-evidence-validate-"));
     try {
@@ -371,12 +282,22 @@ describe("t-ci-full-suite-evidence release.yml wiring", () => {
       };
       const outside = run("1");
       expect(outside.status).toBe(1);
-      expect(outside.stdout).toContain(`::error::${tag} points at ${SHA}, which is not on release/2.11.`);
-      expect(outside.stdout).toContain("Stable publication from this branch requires a tagged commit on release/2.11");
+      expect(outside.stdout).toContain(`::error::${tag} points at ${SHA}, which is not on anchor.`);
       expect(outside.output).toBe("");
       const onMain = run("0");
       expect(onMain.status, onMain.stdout + onMain.stderr).toBe(0);
       expect(onMain.output).toBe(`tag=${tag}\nsha=${SHA}\n`);
+      // An upstream version number never publishes from the fork.
+      const output = join(root, "output");
+      writeFileSync(output, "");
+      const upstreamTag = "v2.11.0";
+      const upstream = bash(validate.run!, REPO_ROOT, {
+        PATH: bin, FIXTURE_ANCESTOR: "0", RELEASE_TAG: upstreamTag, GITHUB_EVENT_NAME: "push",
+        GITHUB_REF: `refs/tags/${upstreamTag}`, GITHUB_SHA: SHA, GITHUB_OUTPUT: posix(output),
+      });
+      expect(upstream.status).toBe(1);
+      expect(upstream.stdout).toContain(`::error::${upstreamTag} is an upstream version`);
+      expect(readFileSync(output, "utf8")).toBe("");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

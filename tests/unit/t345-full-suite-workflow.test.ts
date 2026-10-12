@@ -1032,7 +1032,8 @@ describe("t345 complete nightly coverage", () => {
         expect(job.secrets, `${file}:${name}`).toBe("inherit");
       }
     }
-    expect(callers).toContain("release.yml:full_suite");
+    // Anchor fork (patch 0003): release.yml no longer calls the Full Suite.
+    expect(callers).not.toContain("release.yml:full_suite");
     expect(callers).not.toContain("preview-release.yml:full_suite");
   });
 
