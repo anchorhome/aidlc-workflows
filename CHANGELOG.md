@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [2.10.101] - 2026-10-12
+Anchor Home fork release: upstream 2.10.0 plus the Anchor patches in `anchor/PATCHES.md`. Install with `aidlc update --version 2.10.101` (the fork's releases are the default channel). Fork release numbers are the upstream base patch times 1000, plus 100, plus the fork build, so they never collide with an upstream version.
+* `aidlc engine testing-posture embed --plan <path>` writes the current Testing Contract into a Code Generation plan, inserting or replacing it byte-for-byte as `render` prints it, so a plan built this way passes Plan Approval on the first try (#334). The plan-approval guard admits it only for a plan inside the Code Generation record directory.
+* The plan-approval guard admits unit-major re-entry receipts after a backward jump into Code Generation instead of deadlocking.
+* `aidlc update`, `install.sh` and `install.ps1` default to `anchorhome/aidlc-workflows` releases and verify their provenance against that repository's release workflow.
 ## [2.10.0] - 2026-09-24
 
 AI-DLC 2.10.0 rolls up the user-visible changes merged since 2.9.0, including conversation-aware AIDA review workflows, stronger human authority and recovery across Construction, multi-harness project coexistence, and reliability corrections across providers, worktrees, hooks, sensors, and stage routing. **Upgrade:** run `aidlc update`, then run `aidlc config --yes` in each project to refresh its harness runtime. Manual-copy users must replace the complete `runtime/<harness>/` tree from `aidlc-copy-runtime-2.10.0.tar.gz`.

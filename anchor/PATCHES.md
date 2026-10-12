@@ -5,7 +5,7 @@ each. `main` only mirrors `awslabs/aidlc-workflows` main. We keep this list
 short: every patch is also offered upstream, and dropped here once an
 upstream release includes it.
 
-Base: `v2.10.0`. Check with `anchor/fork.sh status`.
+Base: `v2.10.0`. Current fork release: `v2.10.101`. Check with `anchor/fork.sh status`.
 
 ## What earns a patch
 
@@ -65,6 +65,19 @@ Considered and declined:
   without the patch.
 - **Upstream:** not filed yet. On rebase past v2.11.0, consider reusing
   upstream's `replaceTestingContractSection` for the splice.
+## 0003 Fork release channel
+- **Why:** anchor-home runs the compiled `aidlc` binary, so a patch only reaches
+  it through a release, and `aidlc update` installs only releases whose
+  provenance GitHub attests. That needs this repo to publish its own releases.
+- **Change:** `DEFAULT_RELEASE_REPOSITORY` (`core/tools/aidlc-release.ts`) and the
+  `install.sh` / `install.ps1` defaults point at `anchorhome/aidlc-workflows`.
+  `release.yml` requires the tag on `anchor` (not `main`) and a fork version
+  (patch >= 100), so mirrored upstream tags never publish here. Fork version =
+  upstream base patch x 1000 + 100 + build (base 2.10.0, build 1 -> 2.10.101).
+  README badge, CHANGELOG and `aidlc-version.ts` carry the fork version.
+- **Test:** `t68`, `t243`, `t244`, `t332`, `t239` pass with the new default; the
+  `gh` test fixture follows it.
+- **Upstream:** never; fork-only. On rebase, re-apply and bump the version.
 ## Known upstream test failures (not ours)
 
 `tests/unit/t343-swarm-checkpoints.test.ts` "lifecycle-gate withdraws batch

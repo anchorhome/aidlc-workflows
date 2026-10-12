@@ -34,12 +34,19 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          # Anchor fork: only fork release numbers (patch >= 100) are released
+          # here. Upstream tags mirrored by anchor/fork.sh sync stop at this line.
+          patch="${RELEASE_TAG##*.}"
+          if (( patch < 100 )); then
+            echo "::error::$RELEASE_TAG is an upstream version; fork releases use patch >= 100"
+            exit 1
+          fi
           test "$GITHUB_EVENT_NAME" = "push"
           test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
           git fetch --force origin \
-            "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" main
+            "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" anchor
           tag_sha="$(git rev-parse "$RELEASE_TAG^{commit}")"
-          main_sha="$(git rev-parse origin/main^{commit})"
+          main_sha="$(git rev-parse origin/anchor^{commit})"
           test "$GITHUB_SHA" = "$tag_sha"
           test "$(git rev-parse HEAD^{commit})" = "$tag_sha"
           git merge-base --is-ancestor "$tag_sha" "$main_sha"
@@ -220,8 +227,8 @@ jobs:
             -Value 'aidlc-lifecycle-provenance-fixture'
           $ghFixture = Join-Path $env:RUNNER_TEMP 'aidlc-gh.ps1'
           $env:AIDLC_TEST_GH_MARKER = Join-Path $env:RUNNER_TEMP 'aidlc-gh-verified'
-          $env:AIDLC_TEST_GH_REPOSITORY = 'awslabs/aidlc-workflows'
-          $env:AIDLC_TEST_GH_WORKFLOW = 'awslabs/aidlc-workflows/.github/workflows/release.yml'
+          $env:AIDLC_TEST_GH_REPOSITORY = 'anchorhome/aidlc-workflows'
+          $env:AIDLC_TEST_GH_WORKFLOW = 'anchorhome/aidlc-workflows/.github/workflows/release.yml'
           $manifest = Get-Content -Raw -LiteralPath (Join-Path $releaseRoot 'version.json') |
             ConvertFrom-Json
           $env:AIDLC_TEST_GH_SOURCE_REF = $manifest.sourceRef
@@ -442,8 +449,8 @@ jobs:
             AIDLC_BIN_DIR="$AIDLC_BIN_DIR" \
             AIDLC_GH_BIN="$gh_bin" \
             AIDLC_TEST_GH_MARKER="$gh_marker" \
-            AIDLC_TEST_GH_REPOSITORY="awslabs/aidlc-workflows" \
-            AIDLC_TEST_GH_WORKFLOW="awslabs/aidlc-workflows/.github/workflows/release.yml" \
+            AIDLC_TEST_GH_REPOSITORY="anchorhome/aidlc-workflows" \
+            AIDLC_TEST_GH_WORKFLOW="anchorhome/aidlc-workflows/.github/workflows/release.yml" \
             AIDLC_TEST_GH_SOURCE_REF="$manifest_source_ref" \
             AIDLC_TEST_GH_SOURCE_DIGEST="$(
               sed -n 's/.*"sourceDigest":[[:space:]]*"\([a-f0-9]*\)".*/\1/p' \
