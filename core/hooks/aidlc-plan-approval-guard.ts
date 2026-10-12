@@ -1383,18 +1383,58 @@ function planWaitAdmits(
   engineArgs: string[],
   gateHeld: boolean,
   askAdmits: (engineArgs: readonly string[]) => boolean,
+  cwd: string = projectDir,
 ): boolean {
   const personSpoke = () => personSpokeSinceGate(projectDir, { requests: true });
-  return isPlanApprovalPrerequisite(engineArgs, gateHeld, personSpoke) ||
+  return isPlanApprovalPrerequisite(engineArgs, gateHeld, personSpoke, { projectDir, cwd }) ||
     askAdmits(engineArgs) || isReadOnlyDiagnostic(engineArgs) || recordedSwitchChangeAdmitted(projectDir, engineArgs) ||
     chatSwitchChangeAdmitted(projectDir, engineArgs) ||
     engineDirectedWhilePlanWaits(engineArgs, () => personSpoke() && lastStepAdmitsPersonsMoves(projectDir));
 }
 
-function isPlanApprovalPrerequisite(
+// Where an invocation runs. Only the `embed` write permit needs it, to resolve
+// its --plan target; without it, embed is not a prerequisite.
+export interface PrerequisiteContext {
+  projectDir: string;
+  cwd: string;
+}
+
+// `testing-posture embed` writes the Testing Contract into a plan, so unlike its
+// read-only siblings it is a prerequisite only while its --plan target resolves
+// inside the Code Generation record dir of the project and unit it names.
+function isRecordDirEmbed(args: string[], context: PrerequisiteContext | undefined): boolean {
+  if (!context) return false;
+  const routeArgs = args.slice(3);
+  const planArg = lastFlagValue(routeArgs, "--plan");
+  if (planArg === null || planArg.trim().length === 0) return false;
+  const projectArg = lastFlagValue(routeArgs, "--project-dir");
+  const projectDir = projectArg === null
+    ? context.projectDir
+    : resolve(context.cwd, projectArg);
+  const unitArg = lastFlagValue(routeArgs, "--unit");
+  const unit = unitArg !== null && unitArg.trim().length > 0 ? unitArg : null;
+  try {
+    const inside = (dir: string, target: string): boolean => {
+      const rel = relative(dir, target);
+      return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+    };
+    const recordDir = resolve(codeGenerationRecordDir(projectDir, unit));
+    const planPath = resolve(context.cwd, planArg);
+    // Lexical containment first, then the real paths, so neither `..` nor a
+    // symlink in the record dir can point the write somewhere else. embed
+    // needs an existing plan, so a missing one fails here as it would there.
+    return inside(recordDir, planPath) &&
+      inside(realpathSync(recordDir), realpathSync(planPath));
+  } catch {
+    return false;
+  }
+}
+
+export function isPlanApprovalPrerequisite(
   args: string[],
   gateHeld = false,
   personSpoke: () => boolean = () => false,
+  context?: PrerequisiteContext,
 ): boolean {
   if (args[0] !== "engine") return false;
   // Direct refusals can offer the abort or the fence switch without publishing
@@ -1443,6 +1483,9 @@ function isPlanApprovalPrerequisite(
     ["resolve", "render", "fingerprint", "verify", "reply", "restore"].includes(verb)
   ) {
     return true;
+  }
+  if (noun === "testing-posture" && verb === "embed") {
+    return isRecordDirEmbed(args, context);
   }
   // The runtime summary only reads runtime-graph.json and the state file.
   // Refusing it sent planning agents into retries before the plan existed.
@@ -1600,7 +1643,7 @@ function isFrameworkToolInvocation(
   enginePaths = false,
   askAdmits: (engineArgs: readonly string[]) => boolean = () => false,
 ): boolean {
-  const admitted = (engineArgs: string[]): boolean => planWaitAdmits(projectDir, engineArgs, gateHeld, askAdmits);
+  const admitted = (engineArgs: string[]): boolean => planWaitAdmits(projectDir, engineArgs, gateHeld, askAdmits, cwd);
   if (isNativePlanApprovalPrerequisite(name, args, admitted, enginePaths)) {
     // A wrapper (env -C, sudo -D, xargs) can run it against another directory
     // than the one these admissions were judged for.
@@ -1742,7 +1785,7 @@ function shellInvocationNeedsApproval(
   const executable = invocation.executable ?? invocation.name;
   const unwrapped = (invocation.launchers?.length ?? 0) === 0 &&
     !invocation.dataDriven && !invocation.executableResolutionChanged;
-  const admitted = (engineArgs: string[]): boolean => planWaitAdmits(projectDir, engineArgs, gateHeld, askAdmits);
+  const admitted = (engineArgs: string[]): boolean => planWaitAdmits(projectDir, engineArgs, gateHeld, askAdmits, cwd);
   if (
     dialect.pathsAsWritten && /[\\/]/.test(executable) &&
     !isNativePlanApprovalPrerequisite(executable, invocation.args, admitted, true)

@@ -1115,7 +1115,7 @@ export const WORKSPACE_NOUNS = ["intent", "space"] as const;
 export type WorkspaceNoun = (typeof WORKSPACE_NOUNS)[number];
 
 // aidlc-testing-posture.ts runs the first of these it finds anywhere in argv.
-export const TESTING_POSTURE_SUBCOMMANDS = ["resolve", "render", "fingerprint", "verify", "begin", "brief", "reply", "restore"] as const;
+export const TESTING_POSTURE_SUBCOMMANDS = ["resolve", "render", "fingerprint", "verify", "begin", "brief", "reply", "restore", "embed"] as const;
 
 // The commands aidlc-utility.ts dispatches, as its unknown-command error lists them.
 export const UTILITY_COMMANDS = [

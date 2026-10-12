@@ -1211,7 +1211,7 @@ export function renderTestingContract(contract: TestingPostureContract): string 
   return `${CONTRACT_HEADING}\n\n\`\`\`json\n${JSON.stringify(contract, null, 2)}\n\`\`\`\n`;
 }
 
-function rawMarkdownSection(content: string, heading: string): string {
+export function rawMarkdownSection(content: string, heading: string): string {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const body: string[] = [];
   let found = false;
@@ -1261,6 +1261,58 @@ export function readTestingContract(
   }
   const { contract_sha256: recorded, ...body } = parsed;
   return hashObject(body) === recorded ? { contract: parsed } : { defect: "mismatch" };
+}
+
+// Line span of a `## ` section, found with the same fence-aware scan
+// rawMarkdownSection uses, so a fenced ``` line in the plan body cannot end the
+// section early. `end` is exclusive: the first line of the next out-of-fence
+// `## ` heading, or the line count. Lines are the \r\n-normalized split.
+function markdownSectionBounds(
+  lines: readonly string[],
+  heading: string,
+): { start: number; end: number } | null {
+  let start = -1;
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (start < 0) {
+      if (!inFence && line.trimEnd() === heading) start = i;
+      continue;
+    }
+    if (!inFence && /^## [^\n]*$/.test(line)) return { start, end: i };
+  }
+  return start < 0 ? null : { start, end: lines.length };
+}
+
+// Writes the posture's Testing Contract into the plan at planPath: appended
+// when the plan has none, replaced in place when it has one. The block is
+// always renderTestingContract(contract), byte for byte, so it round-trips
+// through parseTestingContract (#334: a hand-copied block loses its literal
+// \n escapes). Running it twice leaves the file unchanged. A missing plan makes
+// readFileSync throw before anything is written, so no file is ever created.
+export function embedTestingContract(
+  planPath: string,
+  contract: TestingPostureContract,
+): void {
+  const block = renderTestingContract(contract);
+  const original = readFileSync(planPath, "utf-8");
+  const lines = original.replace(/\r\n/g, "\n").split("\n");
+  const bounds = markdownSectionBounds(lines, CONTRACT_HEADING);
+  let result: string;
+  if (bounds === null) {
+    const separator = original.length === 0 ? "" : original.endsWith("\n") ? "\n" : "\n\n";
+    result = `${original}${separator}${block}`;
+  } else {
+    const before = lines.slice(0, bounds.start).join("\n");
+    const after = lines.slice(bounds.end).join("\n");
+    const prefix = bounds.start > 0 ? `${before}\n` : "";
+    result = bounds.end < lines.length ? `${prefix}${block}\n${after}` : `${prefix}${block}`;
+  }
+  writeFileSync(planPath, result);
 }
 
 export function parseTestingContract(plan: string): TestingPostureContract | null {
@@ -5058,6 +5110,14 @@ export function main(argv: string[]): void {
       case "render":
         process.stdout.write(renderTestingContract(resolveTestingPosture(projectDir)));
         return;
+      case "embed": {
+        const planPath = flagValue(argv, "--plan");
+        if (!planPath || planPath.startsWith("--") || planPath.trim().length === 0) {
+          throw new Error("embed requires a non-blank --plan <path>");
+        }
+        embedTestingContract(planPath, resolveTestingPosture(projectDir));
+        return;
+      }
       case "fingerprint": {
         if (planApprovalAskIsOpen(projectDir)) throw new Error(PLAN_APPROVAL_ASKED_BY_ENGINE);
         // Only the retired strict drift question ever emitted --reapprove; an agent
@@ -5199,7 +5259,7 @@ export function main(argv: string[]): void {
         return;
       default:
         throw new Error(
-          `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: resolve, render, fingerprint, verify, begin, brief, reply, restore`,
+          `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: ${TESTING_POSTURE_SUBCOMMANDS.join(", ")}`,
         );
     }
   } catch (error) {

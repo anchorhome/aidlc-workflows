@@ -1,3 +1,3 @@
 # Test files covering anchor patches. `anchor/fork.sh test` runs these after
 # typecheck and the package determinism check.
-tests/unit/t265-plan-approval-guard.test.ts
+tests/unit/t-anchor-testing-posture-embed.test.ts
