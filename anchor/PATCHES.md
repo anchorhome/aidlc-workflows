@@ -5,7 +5,7 @@ each. `main` only mirrors `awslabs/aidlc-workflows` main. We keep this list
 short: every patch is also offered upstream, and dropped here once an
 upstream release includes it.
 
-Base: `v2.11.0`. Current fork release: `v2.11.101`. Check with `anchor/fork.sh status`.
+Base: `v2.11.0`. Current fork release: `v2.11.102`. Check with `anchor/fork.sh status`.
 
 ## What earns a patch
 

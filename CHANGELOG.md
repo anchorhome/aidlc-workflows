@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [2.11.102] - 2026-10-18
+Anchor Home fork release: upstream 2.11.0 plus the Anchor patches in `anchor/PATCHES.md`. Install with `aidlc update --version 2.11.102`.
+* Apple and Swift tool output no longer counts as application source: SwiftPM's `.build/`, Xcode's `DerivedData/` and `xcuserdata/`, `*.xcresult` test bundles and `.hypothesis/` are left out of the source fingerprint at any depth, like `node_modules` and `.venv`, so a build or test run during a stage no longer blocks Code Generation from completing or makes `AIDLC_SKIP_SOURCE_FRESHNESS` necessary. The boundary stays name-based: Git-ignored source files are still checked.
+
 ## [2.11.101] - 2026-10-12
 Anchor Home fork release: upstream 2.11.0 plus the Anchor patches in `anchor/PATCHES.md`. Install with `aidlc update --version 2.11.101` (the fork's releases are the default channel). Fork release numbers are the upstream base patch times 1000, plus 100, plus the fork build, so they never collide with an upstream version.
 * `aidlc engine testing-posture embed --plan <path>` writes the current Testing Contract into a Code Generation plan, inserting or replacing it byte-for-byte as `render` prints it, so a plan built this way passes Plan Approval on the first try (#334). The plan-approval guard admits it only for a plan inside the Code Generation record directory.
