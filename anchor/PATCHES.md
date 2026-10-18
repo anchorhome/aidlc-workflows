@@ -73,6 +73,30 @@ refused. Dropped; nothing to carry.
   origin runs `release.yml` on any `v*.*.*` tag push, and an upstream tag's
   own `release.yml` has no fork guard.
 - **Upstream:** never; fork-only. On rebase, re-apply and bump the version.
+## 0004 Apple/Swift tool output leaves the source boundary
+- **Why:** every build or test run rewrites SwiftPM's `.build/`, Xcode's
+  `DerivedData/` and `xcuserdata/`, `*.xcresult` test bundles and the
+  `.hypothesis/` example database. None is on the fixed exclusion list, so
+  each run drifted the source fingerprint and filled the unclaimed-source
+  listing, and Code Generation could not complete without
+  `AIDLC_SKIP_SOURCE_FRESHNESS=1`. Blocked anchor-home `260926-hub-redesign`
+  (72,437 flagged paths, 72,426 under `.build/`) and
+  `261013-freshness-skip-removal` (#294). Upstream #1034, #1099.
+- **Change:** `core/tools/aidlc-lib.ts` adds `.build`, `DerivedData`,
+  `xcuserdata` and `.hypothesis` to `SOURCE_FINGERPRINT_HARD_EXCLUDED_NAMES`,
+  and a `.xcresult` directory-name suffix; every hard-excluded check (the walk,
+  the brownfield scan, recorded-listing filters, the snapshot pathspecs) now
+  goes through `sourceFingerprintHardExcludedDir`. Still name-based, so Git
+  availability never changes the boundary and Git-ignored source stays bound
+  (upstream's t314/t345 rule). Declined: honouring `.gitignore`, which would
+  let real code hide in an ignored file and slip past review and freshness.
+- **Test:** `tests/unit/t-anchor-source-tool-output.test.ts`. Two of its four
+  cases fail without the patch. The 18 source-boundary unit suites give the
+  same result with and without it (416 pass, the same 10 pre-existing fails).
+- **Upgrade:** a fingerprint recorded before the patch over a tree holding
+  these dirs compares as changed once. No anchor-home intent is in flight.
+- **Upstream:** offer it; RFC #1273 (a declared exclusion boundary) would
+  subsume it. Drop once a release covers these names.
 ## Known upstream test failures (not ours)
 
 `tests/unit/t343-swarm-checkpoints.test.ts` "lifecycle-gate withdraws batch
