@@ -3438,7 +3438,7 @@ function treeGeneration(
       for (const name of names) {
         const childPortable = portable === "." ? name : `${portable}/${name}`;
         const generatedDir = skipGenerated && (
-          SOURCE_FINGERPRINT_HARD_EXCLUDED_DIRS.has(name) ||
+          sourceFingerprintHardExcludedDir(name) ||
           (dotnetProject && SOURCE_FINGERPRINT_DOTNET_OUTPUT_NAMES.has(name))
         );
         const generatedFile = skipGenerated && sourceFingerprintHardExcludedFile(name);
@@ -20129,9 +20129,11 @@ export function workspaceSourceExclusionPathspecs(
 // names here it is skipped unconditionally in both modes — these cache dirs
 // never hold application source.
 const SOURCE_FINGERPRINT_HARD_EXCLUDED_NAMES = [
+  ".build",
   ".cache",
   ".git",
   ".gradle",
+  ".hypothesis",
   ".mypy_cache",
   ".next",
   ".nuxt",
@@ -20140,13 +20142,26 @@ const SOURCE_FINGERPRINT_HARD_EXCLUDED_NAMES = [
   ".tox",
   ".venv",
   ".vs",
+  "DerivedData",
   "__pycache__",
   "node_modules",
   "venv",
+  "xcuserdata",
 ] as const;
 const SOURCE_FINGERPRINT_HARD_EXCLUDED_DIRS = new Set<string>(
   SOURCE_FINGERPRINT_HARD_EXCLUDED_NAMES,
 );
+// Apple and Swift tool output (anchor patch 0004): `.build` is SwiftPM's build
+// tree, `DerivedData` Xcode's, `xcuserdata` per-user Xcode state, `.hypothesis`
+// Hypothesis's example database, and `*.xcresult` bundles are test results.
+// Every build or test run rewrites them, and none is authored source.
+const SOURCE_FINGERPRINT_HARD_EXCLUDED_DIR_SUFFIXES = [".xcresult"] as const;
+function sourceFingerprintHardExcludedDir(name: string): boolean {
+  return (
+    SOURCE_FINGERPRINT_HARD_EXCLUDED_DIRS.has(name) ||
+    SOURCE_FINGERPRINT_HARD_EXCLUDED_DIR_SUFFIXES.some((suffix) => name.length > suffix.length && name.endsWith(suffix))
+  );
+}
 
 // Tool-managed byproduct FILES that never carry human-authored source: OS
 // metadata (.DS_Store) and coverage databases (.coverage, plus pytest-cov
@@ -20331,10 +20346,10 @@ function sourcePathExcludedSinceRecorded(key: string, entry: string): boolean {
     (separator <= 0 && aidlcRootSettingsExcluded(path, true))
   );
 }
-const SOURCE_FINGERPRINT_HARD_EXCLUDED_GLOBS =
-  SOURCE_FINGERPRINT_HARD_EXCLUDED_NAMES.map(
-    (name) => `:(glob)**/${name}/**`,
-  );
+const SOURCE_FINGERPRINT_HARD_EXCLUDED_GLOBS = [
+  ...SOURCE_FINGERPRINT_HARD_EXCLUDED_NAMES.map((name) => `:(glob)**/${name}/**`),
+  ...SOURCE_FINGERPRINT_HARD_EXCLUDED_DIR_SUFFIXES.map((suffix) => `:(glob)**/*${suffix}/**`),
+];
 
 // These names commonly hold generated output, but can also hold real source.
 // They are always outside the default identity so repository/Git availability
@@ -21474,7 +21489,7 @@ function sourceFingerprintRegistryPaths(
             harnessShellDirs.has(parts[0])
           )
         ) ||
-        parts.some((part) => SOURCE_FINGERPRINT_HARD_EXCLUDED_DIRS.has(part)) ||
+        parts.some((part) => sourceFingerprintHardExcludedDir(part)) ||
         isAidlcSensorCachePath(path)
       ) {
         return noteSourceFailure(
@@ -21513,7 +21528,7 @@ function sourcePathPhysicallyExcluded(
         harnessShellDirs.has(parts[0])
       )
     ) ||
-    parts.some((part) => SOURCE_FINGERPRINT_HARD_EXCLUDED_DIRS.has(part)) ||
+    parts.some((part) => sourceFingerprintHardExcludedDir(part)) ||
     isAidlcSensorCachePath(path)
   );
 }
@@ -22869,7 +22884,7 @@ function filesystemSourceIdentity(
         }
         if (
           (entry.isDirectory() || entry.isSymbolicLink()) &&
-          SOURCE_FINGERPRINT_HARD_EXCLUDED_DIRS.has(entry.name)
+          sourceFingerprintHardExcludedDir(entry.name)
         ) {
           if (entry.isSymbolicLink()) {
             excludedSymlinkPathspecs.add(`:(top,literal)${childSnapshotRel}`);
