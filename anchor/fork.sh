@@ -11,7 +11,8 @@
 #                                         record the project's customizations of shipped JSON
 #   anchor/fork.sh install <project> [--apply|--in-flight]
 #                                         refresh the project from dist/kiro (dry run by default),
-#                                         then re-apply its overlay; --in-flight copies instead,
+#                                         then re-apply its overlay and re-compose its own AI-DLC
+#                                         plugins (tooling/scripts/aidlc-plugin-apply.sh); --in-flight copies instead,
 #                                         for when a workflow is active and aidlc config refuses
 #
 # The overlay lives in this repo: anchor/overlays/<project-dir-name>.json
@@ -23,6 +24,15 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 die() { printf 'fork.sh: %s\n' "$*" >&2; exit 1; }
+# A refresh rewrites core stage sources and the compiled graph, which drops plugin
+# contributions; Kiro has no host plugin list, so the project re-composes its own plugins.
+# anchor-home: tooling/scripts/aidlc-plugin-apply.sh (spec439).
+reapply_plugins() {
+  local project=$1
+  if [ -x "$project/tooling/scripts/aidlc-plugin-apply.sh" ] || [ -f "$project/tooling/scripts/aidlc-plugin-apply.sh" ]; then
+    (cd "$project" && bash tooling/scripts/aidlc-plugin-apply.sh) || die "re-composing project plugins failed; run tooling/scripts/aidlc-plugin-apply.sh in $project"
+  fi
+}
 need_clean() { [ -z "$(git status --porcelain --untracked-files=no)" ] || die "working tree has uncommitted changes"; }
 base_tag() { git describe --tags --abbrev=0 --match 'v[0-9]*' anchor; }
 latest_release() { git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | grep -v -- '-' | head -1; }
@@ -113,6 +123,7 @@ cmd_install_inflight() {
   rsync -a --exclude tools/data/aidlc-projection.json "$ROOT/dist/kiro/.kiro/" "$project/.kiro/"
   (cd "$project" && bun "$ROOT/anchor/overlay.mjs" apply . "$overlay" | grep -v '^!' | tail -1 || true)
   (cd "$project" && bun .kiro/tools/aidlc.ts engine runtime compile >/dev/null)
+  reapply_plugins "$project"
   echo "installed $(git describe --tags --always anchor) into $project (in-flight copy); review with git -C $project diff --stat"
 }
 
@@ -136,6 +147,7 @@ cmd_install() {
   fi
   aidlc config --project-dir "$project" --harness kiro --from "$src" --force --yes --quiet
   bun anchor/overlay.mjs apply "$project" "$overlay"
+  reapply_plugins "$project"
   echo "installed $(git describe --tags --always anchor) into $project; review with git -C $project diff --stat"
 }
 
